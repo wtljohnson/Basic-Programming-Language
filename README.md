@@ -34,7 +34,7 @@ Operations inside brackets will be performed at a higher priority than those out
 Operational priority will remain the same inside the brackets, i.e (The expression (1 + 2 * 3) * 2 will yield exactly the same result as (2 * 3 + 1) * 2)
 
 ### VAR
-Assignation: VAR name = operation
+Assignation: VAR name = operation  
 Assigns a variable with a name of name, which can be made of letters, digits and underscores, where the first character must be a letter, to the result of the operation after the equals sign, which may be a pre-defined variable.  
 e.g(VAR a = 5, sets a equal to 5. VAR a = 5 * 5 sets a equal to 25. VAR b = a would then assign b to the value of a, 25)
 
