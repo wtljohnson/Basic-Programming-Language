@@ -124,6 +124,9 @@ class Token:
             return f"{self.type}:{self.value}"
         return f"{self.type}"
 
+    def matches(self, type_, value):
+        return self.type == type_ and self.value == value
+
 ###############################
 # LEXER
 ###############################
@@ -173,7 +176,7 @@ class Lexer:
                 tokens.append(Token(TT_POW, pos_start=self.pos))
                 self.advance()
             elif self.current_char == "=":
-                tokens.append(Token(TT_POW, pos_start=self.pos))
+                tokens.append(Token(TT_EQ, pos_start=self.pos))
                 self.advance()
             else:
                 pos_start = self.pos.copy()
@@ -226,6 +229,27 @@ class NumberNode:
 
     def __repr__(self):
         return f"{self.tok}"
+
+
+class VarAccessNode:
+    def __init__(self, var_name_tok):
+        self.var_name_tok = var_name_tok
+        self.pos_start = self.var_name_tok.pos_start
+        self.pos_end = self.var_name_tok.pos_end
+
+    def __repr__(self):
+        return f"{self.var_name_tok}"
+
+
+class VarAssignNode:
+    def __init__(self, var_name_tok, value_node):
+        self.var_name_tok = var_name_tok
+        self.value_node = value_node
+        self.pos_start = self.var_name_tok.pos_start
+        self.pos_end = self.value_node.pos_end
+
+    def __repr__(self):
+        return f"({self.var_name_tok}, {self.value_node})"
 
 
 class BinOpNode:
@@ -308,6 +332,9 @@ class Parser:
         if tok.type in (TT_INT, TT_FLOAT):
             res.register(self.advance())
             return res.success(NumberNode(tok))
+        elif tok.type == TT_IDENTIFIER:
+            res.register(self.advance())
+            return res.success(VarAccessNode(tok))
         elif tok.type == TT_LPAREN:
             res.register(self.advance())
             expr = res.register(self.expr())
@@ -339,6 +366,20 @@ class Parser:
         return self.bin_op(self.factor, (TT_MUL, TT_DIV))
 
     def expr(self):
+        res = ParseResult()
+        if self.current_tok.matches(TT_KEYWORD, "VAR"):
+            res.register(self.advance())
+            if self.current_tok.type != TT_IDENTIFIER:
+                return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected identifer"))
+            var_name = self.current_tok
+            res.register(self.advance())
+            if self.current_tok.type != TT_EQ:
+                return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected '='"))
+            res.register(self.advance())
+            expr = res.register(self.expr())
+            if res.error:
+                return res
+            return res.success(VarAssignNode(var_name, expr))
         return self.bin_op(self.term, (TT_PLUS, TT_MINUS))
 
     ###############################
@@ -440,6 +481,29 @@ class Context:
         self.display_name = display_name
         self.parent = parent
         self.parent_entry_pos = parent_entry_pos
+        self.symbol_table = None
+
+
+###############################
+# SYMBOL TABLE
+###############################
+
+class SymbolTable:
+    def __init__(self):
+        self.symbols = {}
+        self.parent = None
+
+    def get(self, name):
+        value = self.symbols.get(name, None)
+        if value is None and self.parent:
+            return self.parent.get(name)
+        return value
+
+    def set(self, name, value):
+        self.symbols[name] = value
+
+    def remove(self, name):
+        del self.symbols[name]
 
 
 ###############################
@@ -456,6 +520,24 @@ class Interpreter:
         raise Exception(f"No visit_{type(node).__name__} method defined")
 
     ###############################
+
+    def visit_VarAccessNode(self, node, context):
+        res = RTResult()
+        var_name = node.var_name_tok.value
+        value = context.symbol_table.get(var_name)
+
+        if not value:
+            return res.failure(RTError(node.pos_start, node.pos_end, f"Name {var_name} is not defined", context))
+        return res.success(value)
+
+    def visit_VarAssignNode(self, node, context):
+        res = RTResult()
+        var_name = node.var_name_tok.value
+        value = res.register(self.visit(node.value_node, context))
+        if res.error:
+            return res
+        context.symbol_table.set(var_name, value)
+        return res.success(value)
 
     def visit_NumberNode(self, node, context):
         return RTResult().success(Number(node.tok.value).set_context(context).set_pos(node.pos_start, node.pos_end))
@@ -506,6 +588,10 @@ class Interpreter:
 # RUN
 ###############################
 
+global_symbol_table = SymbolTable()
+global_symbol_table.set("NULL", Number(0))
+
+
 def run(fn, text):
     # Generate tokens
     lexer = Lexer(fn, text)
@@ -522,6 +608,7 @@ def run(fn, text):
     # Run Program
     interpreter = Interpreter()
     context = Context("<program>")
+    context.symbol_table = global_symbol_table
     result = interpreter.visit(ast.node, context)
 
     return result.value, result.error
