@@ -21,10 +21,10 @@ Represented as a NUM, false is 0 and anything else is true.
 ## Numerical Operations
 
 ### `<NUM>`
-Returns the value given. e.g (`123` will yield 123)
+Returns the value given, e.g (`123` will yield 123)
 
 ### `-<NUM>`
-Returns the negative of the NUM entered.
+Returns the negative of the NUM entered, e.g. (`-5` will yield -5)
 
 ### `<NUM> + <NUM>`
 Adds two numbers together, e.g. (`2 + 2` will yield 4)
