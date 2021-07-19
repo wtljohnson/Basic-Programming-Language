@@ -116,4 +116,5 @@ Will check in order of statements and execute respective &lt;operation&gt; if re
 Executes &lt;operation2&gt; if &lt;comparison&gt; is false.
 
 ### `IF <comparison> THEN (IF <comparison2> THEN <operation>)`
-Nested IF statements only work if prioritised with brackets.
+Nested IF statements only work if prioritised with brackets.  
+This is because if you tried `IF <comparison> THEN IF <comparison2> THEN <operation> ELSE <operation2>`, the ELSE is assigned to the inner loop, not the outer.
