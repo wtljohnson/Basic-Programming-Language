@@ -48,7 +48,7 @@ NULL = 0
 TRUE = 1  
 FALSE = 0
 
-### Assignation: `VAR name = operation`
+### Assignation: `VAR <name> = <operation>`
 
 Assigns a variable with a name of name, which can be made of letters, digits and underscores, where the first character must be a letter, to the result of the operation after the equals sign, which may be a pre-defined variable.  
 e.g(`VAR a = 5`, sets a equal to 5. `VAR a = 5 * 5` sets a equal to 25. `VAR b = a` would then assign b to the value of a, 25)
